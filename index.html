@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Multi‑Page SDG Tracker Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg:#243746;
+  --card:#2f4658;
+  --accent:#1abc9c;
+  --text:#ecf0f1;
+  --warning:#f1c40f;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'Poppins',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+header{
+  background:linear-gradient(90deg,#1abc9c,#16a085);
+  padding:15px 30px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+header h1{margin:0;font-size:20px}
+nav a{
+  color:white;
+  margin-left:20px;
+  text-decoration:none;
+  font-weight:500;
+}
+nav a:hover{opacity:.8}
+.container{
+  padding:30px;
+}
+.title{
+  text-align:center;
+  font-size:32px;
+  margin-bottom:30px;
+  color:var(--accent);
+}
+.grid{
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:25px;
+}
+.card{
+  background:var(--card);
+  border-radius:12px;
+  padding:25px;
+  box-shadow:0 10px 25px rgba(0,0,0,.25);
+}
+.card h2{
+  margin-top:0;
+  color:var(--accent);
+}
+.section{
+  margin-bottom:25px;
+}
+.section h3{
+  border-bottom:2px solid var(--accent);
+  padding-bottom:5px;
+}
+label{
+  display:flex;
+  justify-content:space-between;
+  margin:12px 0;
+}
+input{
+  width:120px;
+  padding:6px;
+  border-radius:6px;
+  border:none;
+}
+button{
+  background:var(--accent);
+  border:none;
+  color:white;
+  padding:12px 20px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:16px;
+}
+button:hover{background:#16a085}
+.score{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin:20px 0;
+}
+.score-circle{
+  width:160px;
+  height:160px;
+  border-radius:50%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:36px;
+  font-weight:600;
+  background: conic-gradient(#2ecc71 0deg, #2ecc71 260deg, #34495e 260deg);
+  transition: background 0.5s;
+}
+.alert{
+  background:var(--warning);
+  color:#2c3e50;
+  padding:15px;
+  border-radius:8px;
+  margin-top:20px;
+}
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr}
+}
+.sdg-strip{
+  display:flex;
+  overflow-x:auto;
+  gap:14px;
+  padding:24px;
+  background:linear-gradient(180deg,#145a32,#0b3d1e);
+  position:relative;
+}
+.sdg-strip::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:url('https://i.imgur.com/VxQxQ9Q.png') repeat-x bottom;
+  opacity:0.35;
+  animation:trees 40s linear infinite;
+  pointer-events:none;
+}
+@keyframes trees{
+  from{background-position:0 bottom}
+  to{background-position:-2000px bottom}
+}
+.sdg-item{
+  min-width:140px;
+  background:rgba(255,255,255,0.15);
+  backdrop-filter:blur(6px);
+  border-radius:16px;
+  text-align:center;
+  padding:12px;
+  color:white;
+  box-shadow:0 6px 18px rgba(0,0,0,.35);
+  cursor:pointer;
+  transition:transform .3s, box-shadow .3s, background .3s;
+}
+.sdg-item:hover{
+  transform:translateY(-8px) scale(1.05);
+  box-shadow:0 12px 28px rgba(0,0,0,.5);
+  background:rgba(46,204,113,0.45);
+}
+.sdg-item:active{transform:scale(0.98)}
+.sdg-item img{
+  width:60px;
+  border-radius:8px;
+}
+.sdg-item span{
+  display:block;
+  font-size:12px;
+  margin-top:6px;
+}
+</style>
+</head>
+<body>
+<!-- SDG DETAIL MODAL -->
+<div id="sdgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;justify-content:center;align-items:center">
+  <div style="background:#2f4658;color:white;width:90%;max-width:900px;border-radius:16px;padding:25px;max-height:90vh;overflow:auto">
+    <h2 id="modalTitle" style="color:#2ecc71"></h2>
+    <p id="modalDesc"></p>
+    <canvas id="sdgDetailChart"></canvas>
+    <button onclick="closeModal()" style="margin-top:15px">Close</button>
+  </div>
+</div>
+
+<header>
+  <h1>SDG Tracker Dashboard</h1>
+  <nav>
+    <a href="#">Home</a>
+    <a href="#">All SDG Targets</a>
+    <a href="#">Methodology</a>
+  </nav>
+</header>
+
+<!-- SDG STRIP -->
+<div class="sdg-strip">
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-01.jpg"><span>No Poverty</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-02.jpg"><span>Zero Hunger</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-03.jpg"><span>Good Health</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-04.jpg"><span>Quality Education</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-05.jpg"><span>Gender Equality</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-06.jpg"><span>Clean Water</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-07.jpg"><span>Clean Energy</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-08.jpg"><span>Decent Work</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-09.jpg"><span>Innovation</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-10.jpg"><span>Reduced Inequality</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-11.jpg"><span>Sustainable Cities</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-12.jpg"><span>Responsible Consumption</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-13.jpg"><span>Climate Action</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-14.jpg"><span>Life Below Water</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-15.jpg"><span>Life on Land</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-16.jpg"><span>Peace & Justice</span></div>
+  <div class="sdg-item" onclick="openSDG(this)"><img src="https://sdgs.un.org/sites/default/files/goals/E_SDG_Icons-17.jpg"><span>Partnerships</span></div>
+</div>
+
+<div class="container">
+  <div class="title">Sustainable Development Goal Calculator</div>
+
+  <div class="grid">
+    <!-- INPUT PANEL -->
+    <div class="card">
+      <h2>Input Your Data</h2>
+
+      <div class="section">
+        <h3>Economic Indicators (SDG 1,8,9,10)</h3>
+        <label>GDP Growth Rate (%) <input id="gdp" value="2.5"></label>
+        <label>Gini Index <input id="gini" value="35"></label>
+        <label>Poverty Rate (%) <input id="poverty" value="10"></label>
+      </div>
+
+      <div class="section">
+        <h3>Social Indicators (SDG 3,4,5)</h3>
+        <label>Literacy Rate (%) <input id="literacy" value="95"></label>
+        <label>Health Expenditure (% GDP) <input id="health" value="7"></label>
+        <label>Basic Services Access (%) <input id="services" value="90"></label>
+      </div>
+
+      <div class="section">
+        <h3>Environmental Indicators (SDG 6,7,12,13,14,15)</h3>
+        <label>CO₂ Emissions (tons per capita) <input id="co2" value="2.0"></label>
+        <label>Renewable Energy (%) <input id="renewable" value="35"></label>
+        <label>Forest Area (%) <input id="forest" value="21"></label>
+      </div>
+
+      <button onclick="calculate()">Calculate Sustainability</button>
+    </div>
+
+    <!-- OUTPUT PANEL -->
+    <div class="card">
+      <h2>Sustainability Score</h2>
+      <div class="score">
+        <div class="score-circle" id="score">72%</div>
+      </div>
+      <div class="alert" id="message">
+        Based on your data, progress is moderate. Improve environmental and income equality indicators.
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0">
+        <select id="region" onchange="updateRegion()">
+          <option value="india">India</option>
+          <option value="global">Global</option>
+        </select>
+      </div>
+      <div id="sdgProgress"></div>
+      <canvas id="sdgChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+const sdgData={
+  india:[65,70,74,76,68,72,75,69,71,66,73,64,67,62,70,72,74],
+  global:[60,66,70,72,65,68,71,67,69,63,70,61,64,59,68,69,71]
+};
+
+const sdgDescriptions={
+'No Poverty':'End poverty in all its forms everywhere.','Zero Hunger':'End hunger and promote sustainable agriculture.','Good Health':'Ensure healthy lives and wellbeing.','Quality Education':'Ensure inclusive and quality education.','Gender Equality':'Achieve gender equality and empower women.','Clean Water':'Ensure water and sanitation for all.','Clean Energy':'Ensure access to affordable clean energy.','Decent Work':'Promote sustained economic growth.','Innovation':'Build resilient infrastructure.','Reduced Inequality':'Reduce inequality within and among countries.','Sustainable Cities':'Make cities inclusive and safe.','Responsible Consumption':'Ensure sustainable consumption.','Climate Action':'Take urgent action on climate change.','Life Below Water':'Conserve oceans and marine resources.','Life on Land':'Protect ecosystems and biodiversity.','Peace & Justice':'Promote peaceful societies.','Partnerships':'Strengthen global partnerships.'
+};
+
+const sdgNames=[
+'No Poverty','Zero Hunger','Good Health','Quality Education','Gender Equality','Clean Water','Clean Energy','Decent Work','Innovation','Reduced Inequality','Sustainable Cities','Responsible Consumption','Climate Action','Life Below Water','Life on Land','Peace & Justice','Partnerships'
+];
+
+function renderProgress(region){
+  const wrap=document.getElementById('sdgProgress');
+  wrap.innerHTML='';
+  sdgData[region].forEach((v,i)=>{
+    wrap.innerHTML+=`
+    <div style="margin:8px 0">
+      <small>${sdgNames[i]} – ${v}%</small>
+      <div style="background:#34495e;border-radius:10px;overflow:hidden">
+        <div style="width:${v}%;background:#2ecc71;padding:6px"></div>
+      </div>
+    </div>`;
+  });
+}
+
+function updateRegion(){
+  const r=document.getElementById('region').value;
+  chart.data.datasets[0].data=[
+    average(sdgData[r].slice(0,6)),
+    average(sdgData[r].slice(6,12)),
+    average(sdgData[r].slice(12,17))
+  ];
+  chart.update();
+  renderProgress(r);
+}
+
+function average(arr){return Math.round(arr.reduce((a,b)=>a+b)/arr.length)}
+
+const ctx=document.getElementById('sdgChart');
+const chart=new Chart(ctx,{
+  type:'bar',
+  data:{labels:['Economic','Social','Environment'],datasets:[{data:[70,80,60]}]},
+  options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}
+});
+
+renderProgress('india');
+
+function calculate(){
+  // Economic inputs
+  const gdp = parseFloat(document.getElementById('gdp').value);
+  const gini = parseFloat(document.getElementById('gini').value);
+  const poverty = parseFloat(document.getElementById('poverty').value);
+
+  // Social inputs
+  const literacy = parseFloat(document.getElementById('literacy').value);
+  const health = parseFloat(document.getElementById('health').value);
+  const services = parseFloat(document.getElementById('services').value);
+
+  // Environmental inputs
+  const co2 = parseFloat(document.getElementById('co2').value);
+  const renewable = parseFloat(document.getElementById('renewable').value);
+  const forest = parseFloat(document.getElementById('forest').value);
+
+  // Calculations
+  let economicScore = (gdp*5 + (100 - gini) + (100 - poverty))/3;
+  let socialScore = (literacy + health*10 + services)/3;
+  let envScore = Math.round((renewable + forest + (50 - co2)*2)/3);
+  if(envScore > 100) envScore = 100;
+  if(envScore < 0) envScore = 0;
+
+  let overall = Math.round((economicScore + socialScore + envScore)/3);
+
+  // Update score circle text
+  const scoreCircle = document.getElementById('score');
+  scoreCircle.innerText = overall + '%';
+
+  // Update score circle color dynamically
+  let color;
+  if(overall >= 80) color = '#27ae60';
+  else if(overall >= 60) color = '#f1c40f';
+  else color = '#e74c3c';
+  scoreCircle.style.background = `conic-gradient(${color} 0deg, ${color} ${overall*3.6}deg, #34495e ${overall*3.6}deg)`;
+
+  // Update alert message
+  const msg = document.getElementById('message');
+  if(overall >= 80){
+    msg.innerText = "Excellent sustainability performance! Keep it up.";
+    msg.style.background = '#27ae60';
+    msg.style.color = 'white';
+  } else if(overall >= 60){
+    msg.innerText = "Moderate sustainability progress. Improve key indicators.";
+    msg.style.background = '#f1c40f';
+    msg.style.color = '#2c3e50';
+  } else {
+    msg.innerText = "Low sustainability score. Urgent improvements needed.";
+    msg.style.background = '#e74c3c';
+    msg.style.color = 'white';
+  }
+
+  // Update chart
+  const region = document.getElementById('region').value;
+  chart.data.datasets[0].data = [
+    Math.round(economicScore),
+    Math.round(socialScore),
+    envScore
+  ];
+  chart.update();
+}
+
+// SDG MODAL FUNCTIONS
+function openSDG(el){
+  const name = el.querySelector('span').innerText;
+  document.getElementById('modalTitle').innerText = name;
+  document.getElementById('modalDesc').innerText = sdgDescriptions[name];
+  document.getElementById('sdgModal').style.display='flex';
+
+  const ctxDetail = document.getElementById('sdgDetailChart');
+  new Chart(ctxDetail,{
+    type:'line',
+    data:{labels:['2018','2019','2020','2021','2022','2023'],datasets:[{data:[50,55,58,60,63,68]}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100}}}
+  });
+}
+function closeModal(){document.getElementById('sdgModal').style.display='none'}
+</script>
+<script src='https://cdn.jotfor.ms/agent/embedjs/019b1d57e71f7c8f99ac0f95ad6f46d0c62a/embed.js'>
+</script>
+</body>
+</html>
